@@ -8,6 +8,7 @@ type AssignmentRow = {
   title: string;
   participant_name: string;
   assistant_name: string | null;
+  congregation_name: string | null;
   notes: string | null;
   start_time: string | null;
   duration_minutes: number | null;
@@ -23,6 +24,7 @@ type AssignmentWrite = {
   title: string;
   participant_name: string;
   assistant_name?: string | null;
+  congregation_name?: string | null;
   notes?: string | null;
   start_time?: string | null;
   duration_minutes?: number | null;

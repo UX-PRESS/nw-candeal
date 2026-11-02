@@ -8,6 +8,7 @@ export type Assignment = {
   title: string;
   participantName: string;
   assistantName?: string;
+  congregationName?: string;
   notes?: string;
   startTime?: string;
   durationMinutes?: number;

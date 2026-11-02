@@ -133,10 +133,19 @@ export function AssignmentDetails({
           ) : null}
           <div>
             <dt>
-              <UserRound aria-hidden="true" size={16} /> Participante
+              <UserRound aria-hidden="true" size={16} />{" "}
+              {assignment.title === "Orador + Congregação"
+                ? "Orador"
+                : "Participante"}
             </dt>
             <dd>{assignment.participantName}</dd>
           </div>
+          {assignment.congregationName ? (
+            <div>
+              <dt>Congregação representada</dt>
+              <dd>{assignment.congregationName}</dd>
+            </div>
+          ) : null}
           {assignment.assistantName ? (
             <div>
               <dt>

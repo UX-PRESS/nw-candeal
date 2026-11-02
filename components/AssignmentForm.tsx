@@ -4,6 +4,11 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { X } from "lucide-react";
 
 import { listParticipantsForAssignmentAction } from "@/app/actions/assignments";
+import {
+  getPartOptions,
+  getSectionOptions,
+  WEEKEND_SECTION,
+} from "@/lib/meeting-program";
 import type {
   ActionResult,
   Assignment,
@@ -20,11 +25,12 @@ type AssignmentFormProps = {
 
 type FormValues = {
   date: string;
-  meetingType: MeetingType;
+  meetingType: MeetingType | "";
   section: string;
   title: string;
   participantName: string;
   assistantName: string;
+  congregationName: string;
   notes: string;
   startTime: string;
   durationMinutes: string;
@@ -33,11 +39,12 @@ type FormValues = {
 function createFormValues(assignment: Assignment | null, initialDate: string): FormValues {
   return {
     date: assignment?.date ?? initialDate,
-    meetingType: assignment?.meetingType ?? "midweek",
+    meetingType: assignment?.meetingType ?? "",
     section: assignment?.section ?? "",
     title: assignment?.title ?? "",
     participantName: assignment?.participantName ?? "",
     assistantName: assignment?.assistantName ?? "",
+    congregationName: assignment?.congregationName ?? "",
     notes: assignment?.notes ?? "",
     startTime: assignment?.startTime ?? "",
     durationMinutes:
@@ -53,7 +60,7 @@ export function AssignmentForm({
   onClose,
   onSave,
 }: AssignmentFormProps) {
-  const dateInputRef = useRef<HTMLInputElement>(null);
+  const meetingTypeInputRef = useRef<HTMLSelectElement>(null);
   const [values, setValues] = useState(() =>
     createFormValues(assignment, initialDate),
   );
@@ -64,7 +71,7 @@ export function AssignmentForm({
   const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
-    dateInputRef.current?.focus();
+    meetingTypeInputRef.current?.focus();
   }, []);
 
   const refreshParticipants = async () => {
@@ -138,6 +145,10 @@ export function AssignmentForm({
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!values.meetingType) {
+      return;
+    }
+
     setIsSaving(true);
     setSaveError(null);
 
@@ -145,10 +156,14 @@ export function AssignmentForm({
       const result = await onSave({
         date: values.date,
         meetingType: values.meetingType,
-        section: values.section.trim(),
+        section:
+          values.meetingType === "weekend"
+            ? values.section.trim() || WEEKEND_SECTION
+            : values.section.trim(),
         title: values.title.trim(),
         participantName: values.participantName.trim(),
         assistantName: values.assistantName.trim() || undefined,
+        congregationName: values.congregationName.trim() || undefined,
         notes: values.notes.trim() || undefined,
         startTime: values.startTime || undefined,
         durationMinutes: values.durationMinutes
@@ -207,104 +222,183 @@ export function AssignmentForm({
         <form className="assignment-form" onSubmit={handleSubmit}>
           <div className="form-grid">
             <label className="form-field">
-              <span>Data</span>
-              <input
-                ref={dateInputRef}
-                type="date"
-                value={values.date}
-                onChange={(event) => updateValue("date", event.target.value)}
-                required
-              />
-            </label>
-
-            <label className="form-field">
               <span>Tipo de reunião</span>
               <select
+                ref={meetingTypeInputRef}
                 value={values.meetingType}
-                onChange={(event) =>
-                  updateValue(
-                    "meetingType",
-                    event.target.value === "weekend" ? "weekend" : "midweek",
-                  )
-                }
+                onChange={(event) => {
+                  const meetingType =
+                    event.target.value === "weekend" ? "weekend" : "midweek";
+                  setValues((currentValues) => ({
+                    ...currentValues,
+                    meetingType,
+                    section: meetingType === "weekend" ? WEEKEND_SECTION : "",
+                    title: "",
+                    congregationName: "",
+                  }));
+                }}
+                required
               >
+                <option value="" disabled>
+                  Selecione a modalidade
+                </option>
                 <option value="midweek">Reunião do meio de semana</option>
                 <option value="weekend">Reunião do fim de semana</option>
               </select>
             </label>
 
-            <label className="form-field">
-              <span>Seção</span>
-              <input
-                type="text"
-                value={values.section}
-                onChange={(event) => updateValue("section", event.target.value)}
-                maxLength={100}
-                placeholder="Ex.: Faça Seu Melhor no Ministério"
-                required
-              />
-            </label>
+            {values.meetingType ? (
+              <>
+                <label className="form-field">
+                  <span>Data</span>
+                  <input
+                    type="date"
+                    value={values.date}
+                    onChange={(event) => updateValue("date", event.target.value)}
+                    required
+                  />
+                </label>
 
-            <label className="form-field">
-              <span>Nome da parte</span>
-              <input
-                type="text"
-                value={values.title}
-                onChange={(event) => updateValue("title", event.target.value)}
-                maxLength={120}
-                placeholder="Ex.: Iniciando conversas"
-                required
-              />
-            </label>
+                {values.meetingType === "midweek" ? (
+                  <label className="form-field">
+                    <span>Seção</span>
+                    <select
+                      value={values.section}
+                      onChange={(event) => {
+                        setValues((currentValues) => ({
+                          ...currentValues,
+                          section: event.target.value,
+                          title: "",
+                          congregationName: "",
+                        }));
+                      }}
+                      required
+                    >
+                      <option value="" disabled>
+                        Selecione uma seção
+                      </option>
+                      {getSectionOptions("midweek", values.section).map(
+                        (section) => (
+                          <option key={section} value={section}>
+                            {section}
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </label>
+                ) : null}
 
-            <label className="form-field">
-              <span>Participante</span>
-              <select
-                value={values.participantName}
-                onChange={(event) =>
-                  updateValue("participantName", event.target.value)
-                }
-                disabled={participantsLoading}
-                required
-              >
-                <option value="" disabled>
-                  {participantsLoading
-                    ? "Carregando participantes..."
-                    : participants.length > 0
-                      ? "Selecione um participante"
-                      : "Nenhum participante cadastrado"}
-                </option>
-                {participantOptions.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                    {!participants.includes(name)
-                      ? " (mantido do registro)"
-                      : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
+                <label className="form-field">
+                  <span>
+                    {values.meetingType === "midweek"
+                      ? "Tipo de participação"
+                      : "Designação"}
+                  </span>
+                  <select
+                    value={values.title}
+                    onChange={(event) => {
+                      const title = event.target.value;
+                      setValues((currentValues) => ({
+                        ...currentValues,
+                        title,
+                        congregationName:
+                          title === "Orador + Congregação"
+                            ? currentValues.congregationName
+                            : "",
+                      }));
+                    }}
+                    required
+                  >
+                    <option value="" disabled>
+                      {values.meetingType === "midweek"
+                        ? "Selecione o tipo de participação"
+                        : "Selecione uma designação"}
+                    </option>
+                    {getPartOptions(
+                      values.meetingType,
+                      values.section,
+                      values.title,
+                    ).map((title) => (
+                      <option key={title} value={title}>
+                        {title}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-            <label className="form-field">
-              <span>Ajudante <span className="optional-label">· opcional</span></span>
-              <select
-                value={values.assistantName}
-                onChange={(event) =>
-                  updateValue("assistantName", event.target.value)
-                }
-                disabled={participantsLoading}
-              >
-                <option value="">Sem ajudante</option>
-                {participantOptions.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                    {!participants.includes(name)
-                      ? " (mantido do registro)"
-                      : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
+                {values.meetingType === "weekend" &&
+                values.title === "Orador + Congregação" ? (
+                  <label className="form-field">
+                    <span>Congregação representada</span>
+                    <input
+                      type="text"
+                      value={values.congregationName}
+                      onChange={(event) =>
+                        updateValue("congregationName", event.target.value)
+                      }
+                      maxLength={120}
+                      required
+                    />
+                  </label>
+                ) : null}
+
+                <label className="form-field">
+                  <span>
+                    {values.meetingType === "weekend" &&
+                    values.title === "Orador + Congregação"
+                      ? "Orador"
+                      : "Participante"}
+                  </span>
+                  <select
+                    value={values.participantName}
+                    onChange={(event) =>
+                      updateValue("participantName", event.target.value)
+                    }
+                    disabled={participantsLoading}
+                    required
+                  >
+                    <option value="" disabled>
+                      {participantsLoading
+                        ? "Carregando participantes..."
+                        : participants.length > 0
+                          ? "Selecione um participante"
+                          : "Nenhum participante cadastrado"}
+                    </option>
+                    {participantOptions.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                        {!participants.includes(name)
+                          ? " (mantido do registro)"
+                          : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="form-field">
+                  <span>
+                    Ajudante <span className="optional-label">· opcional</span>
+                  </span>
+                  <select
+                    value={values.assistantName}
+                    onChange={(event) =>
+                      updateValue("assistantName", event.target.value)
+                    }
+                    disabled={participantsLoading}
+                  >
+                    <option value="">Sem ajudante</option>
+                    {participantOptions.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                        {!participants.includes(name)
+                          ? " (mantido do registro)"
+                          : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </>
+            ) : null}
 
             {participantsError ? (
               <p
@@ -323,16 +417,16 @@ export function AssignmentForm({
               </p>
             ) : null}
 
-            <label className="form-field">
+            {values.meetingType ? <label className="form-field">
               <span>Horário <span className="optional-label">· opcional</span></span>
               <input
                 type="time"
                 value={values.startTime}
                 onChange={(event) => updateValue("startTime", event.target.value)}
               />
-            </label>
+            </label> : null}
 
-            <label className="form-field">
+            {values.meetingType ? <label className="form-field">
               <span>Duração em minutos <span className="optional-label">· opcional</span></span>
               <input
                 type="number"
@@ -345,9 +439,9 @@ export function AssignmentForm({
                   updateValue("durationMinutes", event.target.value)
                 }
               />
-            </label>
+            </label> : null}
 
-            <label className="form-field form-field--wide">
+            {values.meetingType ? <label className="form-field form-field--wide">
               <span>Observações <span className="optional-label">· opcional</span></span>
               <textarea
                 rows={3}
@@ -355,7 +449,7 @@ export function AssignmentForm({
                 onChange={(event) => updateValue("notes", event.target.value)}
                 maxLength={500}
               />
-            </label>
+            </label> : null}
           </div>
 
           <div className="form-actions">

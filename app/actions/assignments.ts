@@ -28,6 +28,7 @@ function parseAssignmentInput(value: unknown): AssignmentInput | null {
     title,
     participantName,
     assistantName,
+    congregationName,
     notes,
     startTime,
     durationMinutes,
@@ -49,6 +50,12 @@ function parseAssignmentInput(value: unknown): AssignmentInput | null {
     (assistantName !== undefined &&
       assistantName !== null &&
       (typeof assistantName !== "string" || assistantName.length > 100)) ||
+    (congregationName !== undefined &&
+      congregationName !== null &&
+      (typeof congregationName !== "string" || congregationName.length > 120)) ||
+    (meetingType === "weekend" &&
+      title === "Orador + Congregação" &&
+      (typeof congregationName !== "string" || !congregationName.trim())) ||
     (notes !== undefined &&
       notes !== null &&
       (typeof notes !== "string" || notes.length > 500)) ||
@@ -75,6 +82,10 @@ function parseAssignmentInput(value: unknown): AssignmentInput | null {
     assistantName:
       typeof assistantName === "string" && assistantName.trim()
         ? assistantName.trim()
+        : undefined,
+    congregationName:
+      typeof congregationName === "string" && congregationName.trim()
+        ? congregationName.trim()
         : undefined,
     notes: typeof notes === "string" && notes.trim() ? notes.trim() : undefined,
     startTime: typeof startTime === "string" ? startTime : undefined,

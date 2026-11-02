@@ -26,8 +26,16 @@ export function AssignmentCard({ assignment, onSelect }: AssignmentCardProps) {
 
       <span className="assignment-person">
         <UserRound aria-hidden="true" size={16} />
-        {assignment.participantName}
+        {assignment.title === "Orador + Congregação"
+          ? `Orador: ${assignment.participantName}`
+          : assignment.participantName}
       </span>
+
+      {assignment.congregationName ? (
+        <span className="assignment-assistant">
+          Congregação: {assignment.congregationName}
+        </span>
+      ) : null}
 
       {assignment.assistantName ? (
         <span className="assignment-assistant">

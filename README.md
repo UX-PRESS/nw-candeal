@@ -25,7 +25,7 @@ A responsive weekly congregation assignment schedule backed by Supabase. Authent
 
    These are the only Supabase variables needed by the app. The anon key is a public client key; database access is restricted by RLS. Never put a `service_role` key in a `NEXT_PUBLIC_*` variable or in this project.
 
-3. In the Supabase SQL Editor, run `supabase/migrations/20261102000100_create_assignments.sql`.
+3. In the Supabase SQL Editor, run the files in `supabase/migrations/` in filename order. This creates the original schedule table and then adds the nullable `congregation_name` field used for visiting speakers. Existing assignment rows are retained.
 4. Create user accounts in **Supabase → Authentication → Users**. The app has no public sign-up flow.
 5. To allow one user to manage assignments, replace `admin@example.com` in `supabase/create-first-admin.sql` with that existing user's email and run the script in the SQL Editor. Regular authenticated users can view assignments without being administrators. To revoke administrator access, delete that user's row from `public.assignment_admins`.
 6. Optionally run `supabase/seed.sql` in the SQL Editor to insert clearly fictional sample assignments for the current week. This is separate from application startup and is safe to re-run.
@@ -40,6 +40,7 @@ Open [http://localhost:3000](http://localhost:3000) and sign in with a Supabase 
 ## Database and security
 
 - The migration creates `public.assignments`, its date and meeting-type indexes, the `public.assignment_admins` role table, and the `public.is_assignment_admin()` helper.
+- The follow-up migration adds nullable `assignments.congregation_name` without changing or deleting existing records. It grants the existing authenticated role column-level write access; RLS still limits writes to administrators.
 - RLS is enabled. Authenticated users can read assignments; insert, update, and delete policies require an administrator row. Anonymous access is revoked.
 - Assignment reads and mutations run in server actions using the signed-in user's cookie session and the public anon key. RLS remains the database authorization boundary.
 - The assignment form reads participant names from `public.participants.name` for both dropdowns. The signed-in account must be allowed to read that table under its existing grants and RLS policies. Assignment records continue storing participant and assistant names as text; the app does not create or modify participant records.
