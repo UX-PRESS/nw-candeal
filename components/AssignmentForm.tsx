@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { X } from "lucide-react";
 
+import { listParticipantsForAssignmentAction } from "@/app/actions/assignments";
 import type {
   ActionResult,
   Assignment,
@@ -56,12 +57,77 @@ export function AssignmentForm({
   const [values, setValues] = useState(() =>
     createFormValues(assignment, initialDate),
   );
+  const [participants, setParticipants] = useState<string[]>([]);
+  const [participantsLoading, setParticipantsLoading] = useState(true);
+  const [participantsError, setParticipantsError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     dateInputRef.current?.focus();
   }, []);
+
+  const refreshParticipants = async () => {
+    setParticipantsLoading(true);
+    setParticipantsError(null);
+
+    try {
+      const result = await listParticipantsForAssignmentAction();
+      if (!result.ok) {
+        setParticipantsError(result.error);
+        return;
+      }
+
+      setParticipants(result.data);
+    } catch {
+      setParticipantsError(
+        "Não foi possível carregar os participantes. Verifique a conexão e tente novamente.",
+      );
+    } finally {
+      setParticipantsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    void listParticipantsForAssignmentAction()
+      .then((result) => {
+        if (!isCurrent) {
+          return;
+        }
+        if (!result.ok) {
+          setParticipantsError(result.error);
+          return;
+        }
+
+        setParticipants(result.data);
+      })
+      .catch(() => {
+        if (isCurrent) {
+          setParticipantsError(
+            "Não foi possível carregar os participantes. Verifique a conexão e tente novamente.",
+          );
+        }
+      })
+      .finally(() => {
+        if (isCurrent) {
+          setParticipantsLoading(false);
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
+
+  const participantOptions = [
+    ...new Set([
+      ...participants,
+      ...(assignment?.participantName ? [assignment.participantName] : []),
+      ...(assignment?.assistantName ? [assignment.assistantName] : []),
+    ]),
+  ].sort((first, second) => first.localeCompare(second, "pt-BR"));
 
   const updateValue = <K extends keyof FormValues>(
     key: K,
@@ -193,29 +259,69 @@ export function AssignmentForm({
 
             <label className="form-field">
               <span>Participante</span>
-              <input
-                type="text"
+              <select
                 value={values.participantName}
                 onChange={(event) =>
                   updateValue("participantName", event.target.value)
                 }
-                maxLength={100}
-                autoComplete="name"
+                disabled={participantsLoading}
                 required
-              />
+              >
+                <option value="" disabled>
+                  {participantsLoading
+                    ? "Carregando participantes..."
+                    : participants.length > 0
+                      ? "Selecione um participante"
+                      : "Nenhum participante cadastrado"}
+                </option>
+                {participantOptions.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                    {!participants.includes(name)
+                      ? " (mantido do registro)"
+                      : ""}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <label className="form-field">
               <span>Ajudante <span className="optional-label">· opcional</span></span>
-              <input
-                type="text"
+              <select
                 value={values.assistantName}
                 onChange={(event) =>
                   updateValue("assistantName", event.target.value)
                 }
-                maxLength={100}
-              />
+                disabled={participantsLoading}
+              >
+                <option value="">Sem ajudante</option>
+                {participantOptions.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                    {!participants.includes(name)
+                      ? " (mantido do registro)"
+                      : ""}
+                  </option>
+                ))}
+              </select>
             </label>
+
+            {participantsError ? (
+              <p
+                className="status-message status-message--error form-field--wide"
+                role="alert"
+              >
+                {participantsError}{" "}
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => void refreshParticipants()}
+                  disabled={participantsLoading}
+                >
+                  Tentar novamente
+                </button>
+              </p>
+            ) : null}
 
             <label className="form-field">
               <span>Horário <span className="optional-label">· opcional</span></span>

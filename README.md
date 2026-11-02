@@ -42,6 +42,8 @@ Open [http://localhost:3000](http://localhost:3000) and sign in with a Supabase 
 - The migration creates `public.assignments`, its date and meeting-type indexes, the `public.assignment_admins` role table, and the `public.is_assignment_admin()` helper.
 - RLS is enabled. Authenticated users can read assignments; insert, update, and delete policies require an administrator row. Anonymous access is revoked.
 - Assignment reads and mutations run in server actions using the signed-in user's cookie session and the public anon key. RLS remains the database authorization boundary.
+- The assignment form reads participant names from `public.participants.name` for both dropdowns. The signed-in account must be allowed to read that table under its existing grants and RLS policies. Assignment records continue storing participant and assistant names as text; the app does not create or modify participant records.
+- When editing an older assignment, a saved participant name remains available in the dropdown even if it is no longer returned from `public.participants`.
 - `proxy.ts` refreshes Supabase Auth cookies. Server-rendered page data is fetched for the authenticated request.
 - No service-role key, custom database bypass, or browser-side privileged credential is used.
 - `data/assignments.ts` is preserved as the original mock-data source for reference. It is not loaded as a fallback and is not automatically copied into the database; use the optional SQL seed when desired.

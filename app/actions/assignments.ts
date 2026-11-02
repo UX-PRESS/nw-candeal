@@ -7,6 +7,7 @@ import {
   listAssignmentsByDateRange,
   updateAssignment as saveAssignment,
 } from "@/lib/assignments-repository";
+import { listParticipants } from "@/lib/participants-repository";
 import { getAssignmentDatabaseErrorMessage } from "@/lib/assignments-errors";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { ActionResult, Assignment, AssignmentInput } from "@/types/assignment";
@@ -122,6 +123,29 @@ async function getAuthenticatedClient(
   }
 
   return { ok: true, supabase };
+}
+
+export async function listParticipantsForAssignmentAction(): Promise<
+  ActionResult<string[]>
+> {
+  const user = await getAuthenticatedClient(true);
+  if (!user.ok) {
+    return user;
+  }
+
+  const { data, error } = await listParticipants(user.supabase);
+  if (error || !data) {
+    console.error(
+      `Supabase participant list request failed (${error?.code ?? "UNKNOWN"}).`,
+    );
+    return {
+      ok: false,
+      error:
+        "Não foi possível carregar os participantes. Verifique a tabela e as permissões de leitura no Supabase.",
+    };
+  }
+
+  return { ok: true, data };
 }
 
 export async function listAssignmentsForWeekAction(

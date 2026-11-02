@@ -37,6 +37,18 @@ export type Database = {
         Update: Partial<AssignmentWrite>;
         Relationships: [];
       };
+      participants: {
+        Row: {
+          name: string;
+        };
+        Insert: {
+          name: string;
+        };
+        Update: {
+          name?: string;
+        };
+        Relationships: [];
+      };
       assignment_admins: {
         Row: {
           user_id: string;
