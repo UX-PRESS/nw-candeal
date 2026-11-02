@@ -337,6 +337,17 @@ h1 {
   background: var(--surface);
 }
 
+.weekly-admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+.weekly-admin-actions > button {
+  min-height: 44px;
+}
+
 .weekly-total {
   display: grid;
   gap: 3px;
@@ -770,6 +781,102 @@ button:disabled {
   box-shadow: 0 24px 60px rgb(0 0 0 / 22%);
 }
 
+.administrator-dialog {
+  width: min(100%, 650px);
+}
+
+.administrator-content {
+  display: grid;
+  gap: 17px;
+  padding: 18px 23px 23px;
+}
+
+.administrator-content > p,
+.administrator-content section > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.administrator-add-form {
+  display: grid;
+  align-items: end;
+  gap: 10px;
+}
+
+.administrator-add-form .primary-button {
+  min-height: 43px;
+}
+
+.administrator-content h3 {
+  margin: 0 0 10px;
+  font-size: 0.96rem;
+}
+
+.administrator-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.administrator-list > li {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface);
+}
+
+.administrator-identity {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-size: 0.86rem;
+}
+
+.administrator-identity svg {
+  flex: 0 0 auto;
+  color: var(--brand);
+}
+
+.administrator-remove {
+  min-height: 36px;
+  padding: 0 10px;
+}
+
+.administrator-confirmation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.8rem;
+}
+
+.administrator-confirmation .secondary-button,
+.administrator-confirmation .danger-outline-button {
+  min-height: 36px;
+  padding: 0 10px;
+}
+
+.administrator-content .status-message {
+  margin: 0;
+}
+
+.administrator-content .loading-state {
+  padding: 12px 0;
+}
+
 .dialog-header {
   display: flex;
   justify-content: space-between;
@@ -954,6 +1061,10 @@ button:disabled {
 
   .form-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .administrator-add-form {
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .form-field--wide {

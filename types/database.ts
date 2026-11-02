@@ -69,8 +69,31 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      add_assignment_admin_by_email: {
+        Args: {
+          target_email: string;
+        };
+        Returns: {
+          user_id: string;
+          email: string;
+          added: boolean;
+        }[];
+      };
       is_assignment_admin: {
         Args: Record<string, never>;
+        Returns: boolean;
+      };
+      list_assignment_admins: {
+        Args: Record<string, never>;
+        Returns: {
+          user_id: string;
+          email: string;
+        }[];
+      };
+      remove_assignment_admin: {
+        Args: {
+          target_user_id: string;
+        };
         Returns: boolean;
       };
     };

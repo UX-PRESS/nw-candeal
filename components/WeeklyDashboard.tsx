@@ -7,6 +7,7 @@ import {
   Info,
   Plus,
   RefreshCw,
+  ShieldCheck,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -16,6 +17,7 @@ import {
   listAssignmentsForWeekAction,
   updateAssignmentAction,
 } from "@/app/actions/assignments";
+import { AdministratorManagement } from "@/components/AdministratorManagement";
 import { AssignmentDetails } from "@/components/AssignmentDetails";
 import { AssignmentForm } from "@/components/AssignmentForm";
 import { EmptyState } from "@/components/EmptyState";
@@ -74,6 +76,8 @@ export function WeeklyDashboard({
   const [editingAssignment, setEditingAssignment] =
     useState<Assignment | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isAdministratorManagementOpen, setIsAdministratorManagementOpen] =
+    useState(false);
 
   const assignmentsForWeek = useMemo(
     () => getAssignmentsForWeek(assignments, selectedWeekStart),
@@ -259,15 +263,25 @@ export function WeeklyDashboard({
           <strong>{isLoading ? "…" : assignmentsForWeek.length}</strong>
         </div>
         {isAdministrator ? (
-          <button
-            className="primary-button add-assignment-button"
-            type="button"
-            onClick={openNewAssignmentForm}
-            disabled={isLoading}
-          >
-            <Plus aria-hidden="true" size={18} />
-            Nova designação
-          </button>
+          <div className="weekly-admin-actions">
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => setIsAdministratorManagementOpen(true)}
+            >
+              <ShieldCheck aria-hidden="true" size={17} />
+              Administradores
+            </button>
+            <button
+              className="primary-button add-assignment-button"
+              type="button"
+              onClick={openNewAssignmentForm}
+              disabled={isLoading}
+            >
+              <Plus aria-hidden="true" size={18} />
+              Nova designação
+            </button>
+          </div>
         ) : null}
       </section>
 
@@ -366,6 +380,12 @@ export function WeeklyDashboard({
             setEditingAssignment(null);
           }}
           onSave={saveAssignment}
+        />
+      ) : null}
+
+      {isAdministratorManagementOpen && isAdministrator ? (
+        <AdministratorManagement
+          onClose={() => setIsAdministratorManagementOpen(false)}
         />
       ) : null}
     </main>
