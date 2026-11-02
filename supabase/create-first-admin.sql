@@ -1,13 +1,15 @@
 
 do $$
 declare
-  administrator_id uuid := '203129ad-2fbb-4507-aeb5-6d5d42d01b06';
+  administrator_email text := 'replace-with-admin-email@example.com';
+  administrator_id uuid;
 begin
-  if not exists (
-    select 1
-    from auth.users
-    where id = administrator_id
-  ) then
+  select id
+  into administrator_id
+  from auth.users
+  where lower(email) = lower(administrator_email);
+
+  if administrator_id is null then
     raise exception 'User not found in Supabase Auth';
   end if;
 

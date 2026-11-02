@@ -139,7 +139,7 @@ async function getAuthenticatedClient(
 export async function listParticipantsForAssignmentAction(): Promise<
   ActionResult<string[]>
 > {
-  const user = await getAuthenticatedClient(true);
+  const user = await getAuthenticatedClient(false);
   if (!user.ok) {
     return user;
   }

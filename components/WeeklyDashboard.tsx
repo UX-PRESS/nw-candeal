@@ -217,7 +217,11 @@ export function WeeklyDashboard({
             {userEmail}
           </span>
           <span className={`role-badge${isAdministrator ? " role-badge--admin" : ""}`}>
-            {isAdministrator ? "Administrador" : "Leitura"}
+            {permissionError
+              ? "Permissão indisponível"
+              : isAdministrator
+                ? "Administradora"
+                : "Leitura"}
           </span>
           <SignOutButton />
         </div>

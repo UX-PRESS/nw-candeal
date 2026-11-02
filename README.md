@@ -27,9 +27,10 @@ A responsive weekly congregation assignment schedule backed by Supabase. Authent
 
 3. In the Supabase SQL Editor, run the files in `supabase/migrations/` in filename order. This creates the original schedule table and then adds the nullable `congregation_name` field used for visiting speakers. Existing assignment rows are retained.
 4. Create user accounts in **Supabase → Authentication → Users**. The app has no public sign-up flow.
-5. To allow one user to manage assignments, replace `admin@example.com` in `supabase/create-first-admin.sql` with that existing user's email and run the script in the SQL Editor. Regular authenticated users can view assignments without being administrators. To revoke administrator access, delete that user's row from `public.assignment_admins`.
-6. Optionally run `supabase/seed.sql` in the SQL Editor to insert clearly fictional sample assignments for the current week. This is separate from application startup and is safe to re-run.
-7. Start the app:
+5. To inspect the target project's objects, RLS policies, administrator membership, and admin-helper result without changing data, replace the email in `supabase/diagnose-access.sql` and run its statements in the SQL Editor. Use this check before changing existing policies.
+6. To allow one user to manage assignments, replace `replace-with-admin-email@example.com` in `supabase/create-first-admin.sql` with that existing user's email and run the script in the SQL Editor. Regular authenticated users can view assignments without being administrators. To revoke administrator access, delete that user's row from `public.assignment_admins`.
+7. Optionally run `supabase/seed.sql` in the SQL Editor to insert clearly fictional sample assignments for the current week. This is separate from application startup and is safe to re-run.
+8. Start the app:
 
    ```bash
    npm run dev
@@ -42,6 +43,8 @@ Open [http://localhost:3000](http://localhost:3000) and sign in with a Supabase 
 - The migration creates `public.assignments`, its date and meeting-type indexes, the `public.assignment_admins` role table, and the `public.is_assignment_admin()` helper.
 - The follow-up migration adds nullable `assignments.congregation_name` without changing or deleting existing records. It grants the existing authenticated role column-level write access; RLS still limits writes to administrators.
 - RLS is enabled. Authenticated users can read assignments; insert, update, and delete policies require an administrator row. Anonymous access is revoked.
+- The application checks administrator status with `public.is_assignment_admin()` and fails closed: if the function is unavailable, the role is shown as unverified and assignment management controls stay hidden.
+- Any authenticated user can request participant names for dropdowns; the `participants` table must allow authenticated `SELECT` through its own grants and RLS. Participant writes must remain administrator-only.
 - Assignment reads and mutations run in server actions using the signed-in user's cookie session and the public anon key. RLS remains the database authorization boundary.
 - The assignment form reads participant names from `public.participants.name` for both dropdowns. The signed-in account must be allowed to read that table under its existing grants and RLS policies. Assignment records continue storing participant and assistant names as text; the app does not create or modify participant records.
 - When editing an older assignment, a saved participant name remains available in the dropdown even if it is no longer returned from `public.participants`.
