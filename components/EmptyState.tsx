@@ -13,8 +13,8 @@ export function EmptyState({ weekRange }: EmptyStateProps) {
       <div>
         <h2 id="empty-state-title">Nenhuma designação nesta semana</h2>
         <p>
-          Não há dados de demonstração para {weekRange}. Escolha outra semana ou
-          volte para a semana atual.
+          Não há designações cadastradas para {weekRange}. Escolha outra semana
+          ou adicione uma nova designação.
         </p>
       </div>
     </section>

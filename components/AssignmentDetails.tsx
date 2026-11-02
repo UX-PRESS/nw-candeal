@@ -1,7 +1,15 @@
 "use client";
 
-import { Clock3, FileText, UserRound, UsersRound, X } from "lucide-react";
-import { useEffect, useRef } from "react";
+import {
+  Clock3,
+  FileText,
+  Pencil,
+  Trash2,
+  UserRound,
+  UsersRound,
+  X,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 import { formatFullDate } from "@/lib/dates";
 import type { Assignment, MeetingType } from "@/types/assignment";
@@ -9,6 +17,8 @@ import type { Assignment, MeetingType } from "@/types/assignment";
 type AssignmentDetailsProps = {
   assignment: Assignment | null;
   onClose: () => void;
+  onEdit: (assignment: Assignment) => void;
+  onDelete: (assignment: Assignment) => void;
 };
 
 const meetingLabels: Record<MeetingType, string> = {
@@ -16,8 +26,16 @@ const meetingLabels: Record<MeetingType, string> = {
   weekend: "Reunião do fim de semana",
 };
 
-export function AssignmentDetails({ assignment, onClose }: AssignmentDetailsProps) {
+export function AssignmentDetails({
+  assignment,
+  onClose,
+  onEdit,
+  onDelete,
+}: AssignmentDetailsProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const [confirmingDeleteFor, setConfirmingDeleteFor] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!assignment) {
@@ -25,16 +43,7 @@ export function AssignmentDetails({ assignment, onClose }: AssignmentDetailsProp
     }
 
     closeButtonRef.current?.focus();
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [assignment, onClose]);
+  }, [assignment]);
 
   if (!assignment) {
     return null;
@@ -46,6 +55,7 @@ export function AssignmentDetails({ assignment, onClose }: AssignmentDetailsProp
   ]
     .filter(Boolean)
     .join(" · ");
+  const confirmingDelete = confirmingDeleteFor === assignment.id;
 
   return (
     <div
@@ -62,6 +72,11 @@ export function AssignmentDetails({ assignment, onClose }: AssignmentDetailsProp
         role="dialog"
         aria-modal="true"
         aria-labelledby="assignment-details-title"
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            onClose();
+          }
+        }}
       >
         <header className="dialog-header">
           <div>
@@ -119,6 +134,48 @@ export function AssignmentDetails({ assignment, onClose }: AssignmentDetailsProp
             </div>
           ) : null}
         </dl>
+        <footer className="dialog-actions">
+          {confirmingDelete ? (
+            <div className="delete-confirmation" role="alert">
+              <p>Deseja excluir esta designação? Esta ação não pode ser desfeita.</p>
+              <div className="form-actions">
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => setConfirmingDeleteFor(null)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  className="danger-button"
+                  type="button"
+                  onClick={() => onDelete(assignment)}
+                >
+                  Excluir designação
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => onEdit(assignment)}
+              >
+                <Pencil aria-hidden="true" size={16} />
+                Editar
+              </button>
+              <button
+                className="danger-outline-button"
+                type="button"
+                onClick={() => setConfirmingDeleteFor(assignment.id)}
+              >
+                <Trash2 aria-hidden="true" size={16} />
+                Excluir
+              </button>
+            </>
+          )}
+        </footer>
       </section>
     </div>
   );

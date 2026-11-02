@@ -19,7 +19,7 @@ export function AssignmentCard({ assignment, onSelect }: AssignmentCardProps) {
       className="assignment-card"
       type="button"
       onClick={() => onSelect(assignment)}
-      aria-label={`Ver detalhes: ${assignment.title}`}
+      aria-label={`Ver detalhes de ${assignment.title}, com ${assignment.participantName}`}
     >
       <span className="assignment-section">{assignment.section}</span>
       <span className="assignment-title">{assignment.title}</span>

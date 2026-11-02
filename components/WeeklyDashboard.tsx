@@ -1,39 +1,35 @@
 "use client";
 
-import { CalendarCheck2, Clock3, Info, Sparkles } from "lucide-react";
+import {
+  CalendarCheck2,
+  Clock3,
+  Info,
+  Plus,
+  Sparkles,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { AssignmentDetails } from "@/components/AssignmentDetails";
+import { AssignmentForm, type AssignmentInput } from "@/components/AssignmentForm";
 import { EmptyState } from "@/components/EmptyState";
 import { MeetingSection } from "@/components/MeetingSection";
 import { WeekNavigator } from "@/components/WeekNavigator";
 import { createMockAssignments, mockDataNotice } from "@/data/assignments";
 import {
+  addDays,
   addWeeks,
   formatFullDate,
   formatWeekRange,
   fromDateKey,
   getStartOfWeek,
-  isDateInWeek,
+  toDateKey,
 } from "@/lib/dates";
-import type { Assignment, MeetingType } from "@/types/assignment";
-
-const meetingLabels: Record<MeetingType, string> = {
-  midweek: "Reunião do meio de semana",
-  weekend: "Reunião do fim de semana",
-};
-
-function sortAssignments(assignments: Assignment[]): Assignment[] {
-  return [...assignments].sort((first, second) => {
-    const firstTime = `${first.date}T${first.startTime ?? "00:00"}`;
-    const secondTime = `${second.date}T${second.startTime ?? "00:00"}`;
-    return firstTime.localeCompare(secondTime);
-  });
-}
-
-function getAssignmentDateTime(assignment: Assignment): Date {
-  return new Date(`${assignment.date}T${assignment.startTime ?? "00:00"}`);
-}
+import {
+  getAssignmentsForWeek,
+  getNextAssignment,
+  groupAssignmentsByMeeting,
+} from "@/lib/assignments";
+import type { Assignment } from "@/types/assignment";
 
 type WeeklyDashboardProps = {
   initialWeekStart: string;
@@ -48,33 +44,74 @@ export function WeeklyDashboard({
     getStartOfWeek(fromDateKey(initialWeekStart)),
   );
   const [selectedWeekStart, setSelectedWeekStart] = useState(currentWeekStart);
-  const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
-  const mockAssignments = useMemo(() => createMockAssignments(currentWeekStart), [currentWeekStart]);
+  const [assignments, setAssignments] = useState(() =>
+    createMockAssignments(fromDateKey(initialWeekStart)),
+  );
+  const [selectedAssignment, setSelectedAssignment] =
+    useState<Assignment | null>(null);
+  const [editingAssignment, setEditingAssignment] =
+    useState<Assignment | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   const assignmentsForWeek = useMemo(
-    () =>
-      sortAssignments(
-        mockAssignments.filter((assignment) =>
-          isDateInWeek(assignment.date, selectedWeekStart),
-        ),
-      ),
-    [mockAssignments, selectedWeekStart],
+    () => getAssignmentsForWeek(assignments, selectedWeekStart),
+    [assignments, selectedWeekStart],
   );
-
-  const midweekAssignments = assignmentsForWeek.filter(
-    (assignment) => assignment.meetingType === "midweek",
+  const meetingGroups = useMemo(
+    () => groupAssignmentsByMeeting(assignmentsForWeek),
+    [assignmentsForWeek],
   );
-  const weekendAssignments = assignmentsForWeek.filter(
-    (assignment) => assignment.meetingType === "weekend",
+  const nextAssignment = getNextAssignment(
+    assignmentsForWeek,
+    selectedWeekStart,
+    currentWeekStart,
+    new Date(initialDateTime),
   );
-  const nextAssignment =
-    assignmentsForWeek.find(
-      (assignment) => getAssignmentDateTime(assignment) >= new Date(initialDateTime),
-    ) ?? assignmentsForWeek[0];
   const currentWeekLabel = formatWeekRange(selectedWeekStart);
+  const newAssignmentDate = toDateKey(addDays(selectedWeekStart, 2));
 
   const changeWeek = (direction: number) => {
     setSelectedWeekStart((weekStart) => addWeeks(weekStart, direction));
+    setSelectedAssignment(null);
+  };
+
+  const openNewAssignmentForm = () => {
+    setEditingAssignment(null);
+    setIsFormOpen(true);
+  };
+
+  const openEditAssignmentForm = (assignment: Assignment) => {
+    setSelectedAssignment(null);
+    setEditingAssignment(assignment);
+    setIsFormOpen(true);
+  };
+
+  const saveAssignment = (input: AssignmentInput) => {
+    if (editingAssignment) {
+      setAssignments((currentAssignments) =>
+        currentAssignments.map((assignment) =>
+          assignment.id === editingAssignment.id
+            ? { ...input, id: editingAssignment.id }
+            : assignment,
+        ),
+      );
+    } else {
+      setAssignments((currentAssignments) => [
+        ...currentAssignments,
+        { ...input, id: crypto.randomUUID() },
+      ]);
+    }
+
+    setSelectedWeekStart(getStartOfWeek(fromDateKey(input.date)));
+    setSelectedAssignment(null);
+    setEditingAssignment(null);
+    setIsFormOpen(false);
+  };
+
+  const deleteAssignment = (assignment: Assignment) => {
+    setAssignments((currentAssignments) =>
+      currentAssignments.filter((current) => current.id !== assignment.id),
+    );
     setSelectedAssignment(null);
   };
 
@@ -97,7 +134,7 @@ export function WeeklyDashboard({
           <p className="eyebrow">Agenda semanal</p>
           <h1 id="page-title">Designações da semana</h1>
           <p className="page-summary">
-            Consulte rapidamente os responsáveis por cada parte das reuniões.
+            Consulte e organize os responsáveis por cada parte das reuniões.
           </p>
         </div>
         <p className="mock-notice">
@@ -116,6 +153,24 @@ export function WeeklyDashboard({
         onNextWeek={() => changeWeek(1)}
       />
 
+      <section
+        className="weekly-overview"
+        aria-label="Resumo das designações da semana"
+      >
+        <div className="weekly-total">
+          <span>Designações nesta semana</span>
+          <strong>{assignmentsForWeek.length}</strong>
+        </div>
+        <button
+          className="primary-button add-assignment-button"
+          type="button"
+          onClick={openNewAssignmentForm}
+        >
+          <Plus aria-hidden="true" size={18} />
+          Nova designação
+        </button>
+      </section>
+
       <section className="schedule-content" id="weekly-schedule" aria-live="polite">
         {nextAssignment ? (
           <section className="next-meeting" aria-labelledby="next-meeting-title">
@@ -124,30 +179,37 @@ export function WeeklyDashboard({
             </div>
             <div className="next-meeting-copy">
               <p>Próxima reunião</p>
-              <h2 id="next-meeting-title">{meetingLabels[nextAssignment.meetingType]}</h2>
+              <h2 id="next-meeting-title">
+                {nextAssignment.meetingType === "midweek"
+                  ? "Reunião do meio de semana"
+                  : "Reunião do fim de semana"}
+              </h2>
               <span>
-                {formatFullDate(nextAssignment.date)} · {nextAssignment.startTime}
+                {formatFullDate(nextAssignment.date)}
+                {nextAssignment.startTime
+                  ? ` · ${nextAssignment.startTime}`
+                  : ""}
               </span>
             </div>
             <div className="next-meeting-assignment">
-              <span>Primeira designação</span>
+              <span>Próxima designação</span>
               <strong>{nextAssignment.participantName}</strong>
+              <small>{nextAssignment.title}</small>
             </div>
           </section>
         ) : null}
 
         {assignmentsForWeek.length > 0 ? (
           <div className="meetings-grid">
-            <MeetingSection
-              meetingType="midweek"
-              assignments={midweekAssignments}
-              onSelect={setSelectedAssignment}
-            />
-            <MeetingSection
-              meetingType="weekend"
-              assignments={weekendAssignments}
-              onSelect={setSelectedAssignment}
-            />
+            {meetingGroups.map((group) => (
+              <MeetingSection
+                key={`${group.date}-${group.meetingType}`}
+                date={group.date}
+                meetingType={group.meetingType}
+                assignments={group.assignments}
+                onSelect={setSelectedAssignment}
+              />
+            ))}
           </div>
         ) : (
           <EmptyState weekRange={currentWeekLabel} />
@@ -155,13 +217,28 @@ export function WeeklyDashboard({
       </section>
 
       <footer className="site-footer">
-        MVP 1 · Agenda semanal · Dados apenas para demonstração
+        MVP 1 · Alterações temporárias nesta sessão · Dados apenas para demonstração
       </footer>
 
       <AssignmentDetails
         assignment={selectedAssignment}
         onClose={() => setSelectedAssignment(null)}
+        onEdit={openEditAssignmentForm}
+        onDelete={deleteAssignment}
       />
+
+      {isFormOpen ? (
+        <AssignmentForm
+          key={`${editingAssignment?.id ?? "new"}-${newAssignmentDate}`}
+          assignment={editingAssignment}
+          initialDate={newAssignmentDate}
+          onClose={() => {
+            setIsFormOpen(false);
+            setEditingAssignment(null);
+          }}
+          onSave={saveAssignment}
+        />
+      ) : null}
     </main>
   );
 }

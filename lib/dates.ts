@@ -55,6 +55,10 @@ export function formatWeekRange(weekStart: Date): string {
     year: "numeric",
   });
 
+  if (weekStart.getFullYear() !== weekEnd.getFullYear()) {
+    return `${longDate.format(weekStart)} — ${longDate.format(weekEnd)}`;
+  }
+
   return `${shortDate.format(weekStart)} — ${longDate.format(weekEnd)}`;
 }
 

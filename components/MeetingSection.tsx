@@ -3,11 +3,12 @@
 import { CalendarClock, Landmark } from "lucide-react";
 
 import { AssignmentCard } from "@/components/AssignmentCard";
-import { formatMeetingDate } from "@/lib/dates";
+import { formatFullDate } from "@/lib/dates";
 import type { Assignment, MeetingType } from "@/types/assignment";
 
 type MeetingSectionProps = {
   meetingType: MeetingType;
+  date: string;
   assignments: Assignment[];
   onSelect: (assignment: Assignment) => void;
 };
@@ -19,11 +20,11 @@ const meetingLabels: Record<MeetingType, string> = {
 
 export function MeetingSection({
   meetingType,
+  date,
   assignments,
   onSelect,
 }: MeetingSectionProps) {
-  const firstAssignment = assignments[0];
-  const headingId = `${meetingType}-meeting-heading`;
+  const headingId = `${meetingType}-meeting-${date}`;
 
   return (
     <section
@@ -40,32 +41,22 @@ export function MeetingSection({
         </div>
         <div>
           <h2 id={headingId}>{meetingLabels[meetingType]}</h2>
-          {firstAssignment ? (
-            <p>
-              {formatMeetingDate(firstAssignment.date)} · {firstAssignment.startTime}
-            </p>
-          ) : (
-            <p>Nenhuma designação nesta reunião</p>
-          )}
+          <p>{formatFullDate(date)}</p>
         </div>
         <span className="assignment-count">
           {assignments.length} {assignments.length === 1 ? "item" : "itens"}
         </span>
       </header>
 
-      {assignments.length > 0 ? (
-        <div className="assignment-list">
-          {assignments.map((assignment) => (
-            <AssignmentCard
-              assignment={assignment}
-              key={assignment.id}
-              onSelect={onSelect}
-            />
-          ))}
-        </div>
-      ) : (
-        <p className="meeting-empty">Não há designações cadastradas para esta reunião.</p>
-      )}
+      <div className="assignment-list">
+        {assignments.map((assignment) => (
+          <AssignmentCard
+            assignment={assignment}
+            key={assignment.id}
+            onSelect={onSelect}
+          />
+        ))}
+      </div>
     </section>
   );
 }
