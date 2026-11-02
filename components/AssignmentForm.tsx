@@ -3,15 +3,18 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { X } from "lucide-react";
 
-import type { Assignment, MeetingType } from "@/types/assignment";
-
-export type AssignmentInput = Omit<Assignment, "id">;
+import type {
+  ActionResult,
+  Assignment,
+  AssignmentInput,
+  MeetingType,
+} from "@/types/assignment";
 
 type AssignmentFormProps = {
   assignment: Assignment | null;
   initialDate: string;
   onClose: () => void;
-  onSave: (assignment: AssignmentInput) => void;
+  onSave: (assignment: AssignmentInput) => Promise<ActionResult<Assignment>>;
 };
 
 type FormValues = {
@@ -53,6 +56,8 @@ export function AssignmentForm({
   const [values, setValues] = useState(() =>
     createFormValues(assignment, initialDate),
   );
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     dateInputRef.current?.focus();
@@ -65,22 +70,34 @@ export function AssignmentForm({
     setValues((currentValues) => ({ ...currentValues, [key]: value }));
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setIsSaving(true);
+    setSaveError(null);
 
-    onSave({
-      date: values.date,
-      meetingType: values.meetingType,
-      section: values.section.trim(),
-      title: values.title.trim(),
-      participantName: values.participantName.trim(),
-      assistantName: values.assistantName.trim() || undefined,
-      notes: values.notes.trim() || undefined,
-      startTime: values.startTime || undefined,
-      durationMinutes: values.durationMinutes
-        ? Number(values.durationMinutes)
-        : undefined,
-    });
+    try {
+      const result = await onSave({
+        date: values.date,
+        meetingType: values.meetingType,
+        section: values.section.trim(),
+        title: values.title.trim(),
+        participantName: values.participantName.trim(),
+        assistantName: values.assistantName.trim() || undefined,
+        notes: values.notes.trim() || undefined,
+        startTime: values.startTime || undefined,
+        durationMinutes: values.durationMinutes
+          ? Number(values.durationMinutes)
+          : undefined,
+      });
+
+      if (!result.ok) {
+        setSaveError(result.error);
+      }
+    } catch {
+      setSaveError("Não foi possível salvar. Verifique a conexão e tente novamente.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -236,11 +253,20 @@ export function AssignmentForm({
           </div>
 
           <div className="form-actions">
+            {saveError ? (
+              <p className="status-message status-message--error" role="alert">
+                {saveError}
+              </p>
+            ) : null}
             <button className="secondary-button" type="button" onClick={onClose}>
               Cancelar
             </button>
-            <button className="primary-button" type="submit">
-              {assignment ? "Salvar alterações" : "Adicionar designação"}
+            <button className="primary-button" type="submit" disabled={isSaving}>
+              {isSaving
+                ? "Salvando..."
+                : assignment
+                  ? "Salvar alterações"
+                  : "Adicionar designação"}
             </button>
           </div>
         </form>

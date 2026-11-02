@@ -12,3 +12,9 @@ export type Assignment = {
   startTime?: string;
   durationMinutes?: number;
 };
+
+export type AssignmentInput = Omit<Assignment, "id">;
+
+export type ActionResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; error: string };

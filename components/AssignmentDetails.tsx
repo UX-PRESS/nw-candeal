@@ -12,13 +12,14 @@ import {
 import { useEffect, useRef, useState } from "react";
 
 import { formatFullDate } from "@/lib/dates";
-import type { Assignment, MeetingType } from "@/types/assignment";
+import type { ActionResult, Assignment, MeetingType } from "@/types/assignment";
 
 type AssignmentDetailsProps = {
   assignment: Assignment | null;
+  canManage: boolean;
   onClose: () => void;
   onEdit: (assignment: Assignment) => void;
-  onDelete: (assignment: Assignment) => void;
+  onDelete: (assignment: Assignment) => Promise<ActionResult<null>>;
 };
 
 const meetingLabels: Record<MeetingType, string> = {
@@ -28,6 +29,7 @@ const meetingLabels: Record<MeetingType, string> = {
 
 export function AssignmentDetails({
   assignment,
+  canManage,
   onClose,
   onEdit,
   onDelete,
@@ -36,6 +38,8 @@ export function AssignmentDetails({
   const [confirmingDeleteFor, setConfirmingDeleteFor] = useState<string | null>(
     null,
   );
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (!assignment) {
@@ -56,6 +60,22 @@ export function AssignmentDetails({
     .filter(Boolean)
     .join(" · ");
   const confirmingDelete = confirmingDeleteFor === assignment.id;
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      const result = await onDelete(assignment);
+      if (!result.ok) {
+        setDeleteError(result.error);
+      }
+    } catch {
+      setDeleteError("Não foi possível excluir. Verifique a conexão e tente novamente.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <div
@@ -135,9 +155,14 @@ export function AssignmentDetails({
           ) : null}
         </dl>
         <footer className="dialog-actions">
-          {confirmingDelete ? (
+          {!canManage ? null : confirmingDelete ? (
             <div className="delete-confirmation" role="alert">
               <p>Deseja excluir esta designação? Esta ação não pode ser desfeita.</p>
+              {deleteError ? (
+                <p className="status-message status-message--error" role="alert">
+                  {deleteError}
+                </p>
+              ) : null}
               <div className="form-actions">
                 <button
                   className="secondary-button"
@@ -149,9 +174,10 @@ export function AssignmentDetails({
                 <button
                   className="danger-button"
                   type="button"
-                  onClick={() => onDelete(assignment)}
+                  onClick={handleDelete}
+                  disabled={isDeleting}
                 >
-                  Excluir designação
+                  {isDeleting ? "Excluindo..." : "Excluir designação"}
                 </button>
               </div>
             </div>

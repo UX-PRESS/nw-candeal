@@ -3,18 +3,25 @@
 import {
   CalendarCheck2,
   Clock3,
+  Database,
   Info,
   Plus,
-  Sparkles,
+  RefreshCw,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import {
+  createAssignmentAction,
+  deleteAssignmentAction,
+  listAssignmentsForWeekAction,
+  updateAssignmentAction,
+} from "@/app/actions/assignments";
 import { AssignmentDetails } from "@/components/AssignmentDetails";
-import { AssignmentForm, type AssignmentInput } from "@/components/AssignmentForm";
+import { AssignmentForm } from "@/components/AssignmentForm";
 import { EmptyState } from "@/components/EmptyState";
 import { MeetingSection } from "@/components/MeetingSection";
+import { SignOutButton } from "@/components/SignOutButton";
 import { WeekNavigator } from "@/components/WeekNavigator";
-import { createMockAssignments, mockDataNotice } from "@/data/assignments";
 import {
   addDays,
   addWeeks,
@@ -29,24 +36,39 @@ import {
   getNextAssignment,
   groupAssignmentsByMeeting,
 } from "@/lib/assignments";
-import type { Assignment } from "@/types/assignment";
+import type {
+  ActionResult,
+  Assignment,
+  AssignmentInput,
+} from "@/types/assignment";
 
 type WeeklyDashboardProps = {
   initialWeekStart: string;
   initialDateTime: string;
+  initialAssignments: Assignment[];
+  initialLoadError: string | null;
+  permissionError: string | null;
+  isAdministrator: boolean;
+  userEmail: string;
 };
 
 export function WeeklyDashboard({
   initialWeekStart,
   initialDateTime,
+  initialAssignments,
+  initialLoadError,
+  permissionError,
+  isAdministrator,
+  userEmail,
 }: WeeklyDashboardProps) {
   const [currentWeekStart] = useState(() =>
     getStartOfWeek(fromDateKey(initialWeekStart)),
   );
   const [selectedWeekStart, setSelectedWeekStart] = useState(currentWeekStart);
-  const [assignments, setAssignments] = useState(() =>
-    createMockAssignments(fromDateKey(initialWeekStart)),
-  );
+  const [assignments, setAssignments] = useState(initialAssignments);
+  const [loadError, setLoadError] = useState(initialLoadError);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedAssignment, setSelectedAssignment] =
     useState<Assignment | null>(null);
   const [editingAssignment, setEditingAssignment] =
@@ -70,9 +92,43 @@ export function WeeklyDashboard({
   const currentWeekLabel = formatWeekRange(selectedWeekStart);
   const newAssignmentDate = toDateKey(addDays(selectedWeekStart, 2));
 
+  const refreshWeek = async (weekStart: Date): Promise<boolean> => {
+    setIsLoading(true);
+    setLoadError(null);
+    const weekStartKey = toDateKey(weekStart);
+
+    try {
+      const result = await listAssignmentsForWeekAction(weekStartKey);
+      if (!result.ok) {
+        setLoadError(result.error);
+        return false;
+      }
+
+      setAssignments(result.data);
+      return true;
+    } catch {
+      setLoadError(
+        "Não foi possível atualizar as designações. Verifique a conexão e tente novamente.",
+      );
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const changeWeek = (direction: number) => {
-    setSelectedWeekStart((weekStart) => addWeeks(weekStart, direction));
+    const nextWeekStart = addWeeks(selectedWeekStart, direction);
+    setSelectedWeekStart(nextWeekStart);
     setSelectedAssignment(null);
+    setStatusMessage(null);
+    void refreshWeek(nextWeekStart);
+  };
+
+  const selectCurrentWeek = () => {
+    setSelectedWeekStart(currentWeekStart);
+    setSelectedAssignment(null);
+    setStatusMessage(null);
+    void refreshWeek(currentWeekStart);
   };
 
   const openNewAssignmentForm = () => {
@@ -81,38 +137,66 @@ export function WeeklyDashboard({
   };
 
   const openEditAssignmentForm = (assignment: Assignment) => {
+    if (!isAdministrator) {
+      return;
+    }
     setSelectedAssignment(null);
     setEditingAssignment(assignment);
     setIsFormOpen(true);
   };
 
-  const saveAssignment = (input: AssignmentInput) => {
-    if (editingAssignment) {
-      setAssignments((currentAssignments) =>
-        currentAssignments.map((assignment) =>
-          assignment.id === editingAssignment.id
-            ? { ...input, id: editingAssignment.id }
-            : assignment,
-        ),
-      );
-    } else {
-      setAssignments((currentAssignments) => [
-        ...currentAssignments,
-        { ...input, id: crypto.randomUUID() },
-      ]);
+  const saveAssignment = async (
+    input: AssignmentInput,
+  ): Promise<ActionResult<Assignment>> => {
+    if (!isAdministrator) {
+      return {
+        ok: false,
+        error: "Somente administradores podem alterar as designações.",
+      };
     }
 
-    setSelectedWeekStart(getStartOfWeek(fromDateKey(input.date)));
-    setSelectedAssignment(null);
+    const result = editingAssignment
+      ? await updateAssignmentAction(editingAssignment.id, input)
+      : await createAssignmentAction(input);
+
+    if (!result.ok) {
+      return result;
+    }
+
+    const targetWeekStart = getStartOfWeek(fromDateKey(result.data.date));
+    setSelectedWeekStart(targetWeekStart);
     setEditingAssignment(null);
     setIsFormOpen(false);
+    setStatusMessage(
+      editingAssignment
+        ? "Designação atualizada com sucesso."
+        : "Designação adicionada com sucesso.",
+    );
+    await refreshWeek(targetWeekStart);
+
+    return result;
   };
 
-  const deleteAssignment = (assignment: Assignment) => {
-    setAssignments((currentAssignments) =>
-      currentAssignments.filter((current) => current.id !== assignment.id),
-    );
+  const deleteAssignment = async (
+    assignment: Assignment,
+  ): Promise<ActionResult<null>> => {
+    if (!isAdministrator) {
+      return {
+        ok: false,
+        error: "Somente administradores podem alterar as designações.",
+      };
+    }
+
+    const result = await deleteAssignmentAction(assignment.id);
+    if (!result.ok) {
+      return result;
+    }
+
     setSelectedAssignment(null);
+    setStatusMessage("Designação excluída com sucesso.");
+    await refreshWeek(selectedWeekStart);
+
+    return result;
   };
 
   return (
@@ -124,9 +208,19 @@ export function WeeklyDashboard({
           </span>
           <span>Agenda Congregação</span>
         </a>
-        <span className="demo-badge">
-          <Sparkles aria-hidden="true" size={14} /> Demonstração
-        </span>
+        <div className="account-controls">
+          <span className="connection-badge">
+            <Database aria-hidden="true" size={14} />
+            Supabase
+          </span>
+          <span className="account-email" title={userEmail}>
+            {userEmail}
+          </span>
+          <span className={`role-badge${isAdministrator ? " role-badge--admin" : ""}`}>
+            {isAdministrator ? "Administrador" : "Leitura"}
+          </span>
+          <SignOutButton />
+        </div>
       </header>
 
       <section className="page-intro" aria-labelledby="page-title">
@@ -139,17 +233,16 @@ export function WeeklyDashboard({
         </div>
         <p className="mock-notice">
           <Info aria-hidden="true" size={16} />
-          {mockDataNotice}
+          Alterações são sincronizadas com o Supabase e ficam disponíveis em
+          outros dispositivos autorizados.
         </p>
       </section>
 
       <WeekNavigator
         weekStart={selectedWeekStart}
+        disabled={isLoading}
         onPreviousWeek={() => changeWeek(-1)}
-        onCurrentWeek={() => {
-          setSelectedWeekStart(currentWeekStart);
-          setSelectedAssignment(null);
-        }}
+        onCurrentWeek={selectCurrentWeek}
         onNextWeek={() => changeWeek(1)}
       />
 
@@ -159,17 +252,31 @@ export function WeeklyDashboard({
       >
         <div className="weekly-total">
           <span>Designações nesta semana</span>
-          <strong>{assignmentsForWeek.length}</strong>
+          <strong>{isLoading ? "…" : assignmentsForWeek.length}</strong>
         </div>
-        <button
-          className="primary-button add-assignment-button"
-          type="button"
-          onClick={openNewAssignmentForm}
-        >
-          <Plus aria-hidden="true" size={18} />
-          Nova designação
-        </button>
+        {isAdministrator ? (
+          <button
+            className="primary-button add-assignment-button"
+            type="button"
+            onClick={openNewAssignmentForm}
+            disabled={isLoading}
+          >
+            <Plus aria-hidden="true" size={18} />
+            Nova designação
+          </button>
+        ) : null}
       </section>
+
+      {permissionError ? (
+        <p className="status-message status-message--error" role="alert">
+          {permissionError}
+        </p>
+      ) : null}
+      {statusMessage ? (
+        <p className="status-message status-message--success" role="status">
+          {statusMessage}
+        </p>
+      ) : null}
 
       <section className="schedule-content" id="weekly-schedule" aria-live="polite">
         {nextAssignment ? (
@@ -199,7 +306,24 @@ export function WeeklyDashboard({
           </section>
         ) : null}
 
-        {assignmentsForWeek.length > 0 ? (
+        {loadError ? (
+          <div className="load-error-panel" role="alert">
+            <p>{loadError}</p>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => void refreshWeek(selectedWeekStart)}
+              disabled={isLoading}
+            >
+              <RefreshCw aria-hidden="true" size={16} />
+              {isLoading ? "Carregando..." : "Tentar novamente"}
+            </button>
+          </div>
+        ) : isLoading && assignmentsForWeek.length === 0 ? (
+          <p className="loading-state" role="status">
+            Carregando designações...
+          </p>
+        ) : assignmentsForWeek.length > 0 ? (
           <div className="meetings-grid">
             {meetingGroups.map((group) => (
               <MeetingSection
@@ -217,11 +341,12 @@ export function WeeklyDashboard({
       </section>
 
       <footer className="site-footer">
-        MVP 1 · Alterações temporárias nesta sessão · Dados apenas para demonstração
+        MVP 1.1 · Dados armazenados no Supabase · Acesso sujeito às permissões da conta
       </footer>
 
       <AssignmentDetails
         assignment={selectedAssignment}
+        canManage={isAdministrator}
         onClose={() => setSelectedAssignment(null)}
         onEdit={openEditAssignmentForm}
         onDelete={deleteAssignment}

@@ -1,59 +1,78 @@
-# Agenda Congregação — MVP 1
+# Agenda Congregação — MVP 1.1
 
-A responsive weekly schedule for viewing and temporarily managing congregation meeting assignments. This first MVP is limited to the weekly schedule.
+A responsive weekly congregation assignment schedule backed by Supabase. Authenticated users can view assignments; only designated administrators can create, edit, or delete them.
 
 ## Prerequisites
 
 - Node.js 20.9 or later
 - npm 10 or later
+- A Supabase project with Email/Password authentication enabled
 
-## Installation
+## Local setup
 
-```bash
-npm install
-```
+1. Install dependencies:
 
-## Local development
+   ```bash
+   npm install
+   ```
 
-Start the development server:
+2. Copy `.env.example` to `.env.local` and fill in the project URL and public anon key from **Supabase → Project Settings → API**:
 
-```bash
-npm run dev
-```
+   ```dotenv
+   NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) in a browser.
+   These are the only Supabase variables needed by the app. The anon key is a public client key; database access is restricted by RLS. Never put a `service_role` key in a `NEXT_PUBLIC_*` variable or in this project.
 
-## Validation and production build
+3. In the Supabase SQL Editor, run `supabase/migrations/20261102000100_create_assignments.sql`.
+4. Create user accounts in **Supabase → Authentication → Users**. The app has no public sign-up flow.
+5. To allow one user to manage assignments, replace `admin@example.com` in `supabase/create-first-admin.sql` with that existing user's email and run the script in the SQL Editor. Regular authenticated users can view assignments without being administrators. To revoke administrator access, delete that user's row from `public.assignment_admins`.
+6. Optionally run `supabase/seed.sql` in the SQL Editor to insert clearly fictional sample assignments for the current week. This is separate from application startup and is safe to re-run.
+7. Start the app:
 
-Run the checks before deploying:
+   ```bash
+   npm run dev
+   ```
+
+Open [http://localhost:3000](http://localhost:3000) and sign in with a Supabase Auth account.
+
+## Database and security
+
+- The migration creates `public.assignments`, its date and meeting-type indexes, the `public.assignment_admins` role table, and the `public.is_assignment_admin()` helper.
+- RLS is enabled. Authenticated users can read assignments; insert, update, and delete policies require an administrator row. Anonymous access is revoked.
+- Assignment reads and mutations run in server actions using the signed-in user's cookie session and the public anon key. RLS remains the database authorization boundary.
+- `proxy.ts` refreshes Supabase Auth cookies. Server-rendered page data is fetched for the authenticated request.
+- No service-role key, custom database bypass, or browser-side privileged credential is used.
+- `data/assignments.ts` is preserved as the original mock-data source for reference. It is not loaded as a fallback and is not automatically copied into the database; use the optional SQL seed when desired.
+
+## Persistence verification
+
+1. Sign in as the administrator and add a uniquely named assignment.
+2. Reload the page, navigate away and back to the week, and confirm the record remains.
+3. Edit it, reload, and confirm the changed information remains.
+4. Delete it and confirm it is absent after reloading.
+5. Sign in as a regular authenticated user on another browser/device and confirm the record is visible but management controls are not.
+6. While signed in as that regular user, attempt a direct create/update/delete request; it must be rejected by the server action and by RLS.
+
+The UI hiding controls is not the security boundary: each mutation checks the authenticated administrator role on the server, and the database independently enforces the same rule with RLS.
+
+## Validation
 
 ```bash
 npm run lint
+npx tsc --noEmit
 npm run build
 ```
 
-To run the production build locally after a successful build:
+The SQL migration and persistence/permission behavior must also be verified against a configured Supabase project; a build without credentials cannot verify remote database behavior.
 
-```bash
-npm run start
-```
+## Vercel
 
-## Vercel deployment
+The existing Vercel project should keep its current build and Git settings. Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` to the required Vercel environments (Production, Preview, and Development as applicable), using values from the same Supabase project. Preserve unrelated environment variables and never configure the service-role key for this app.
 
-This project is already connected to Vercel. Keep its existing project and build settings. When Git-based deployments are enabled, pushing a branch can create a preview deployment and updates to the configured production branch can trigger a production deployment.
+After running the database migration and configuring variables, deploy through the existing Vercel workflow when ready. This implementation does not trigger a deployment.
 
-This MVP task does not publish or trigger a deployment. Check the existing project in the Vercel dashboard before deploying changes. A deployment can also be started manually from the project directory with the Vercel CLI after authenticating:
+## Scope and limitations
 
-```bash
-npx vercel
-```
-
-## Mock data
-
-The assignments shown in this MVP are local demonstration data generated by `data/assignments.ts`. Names, assignments, notes, and times are illustrative and do not represent real congregation information.
-
-The mock records are deliberately isolated from the user interface so a future API or Supabase integration can replace that data source without redesigning the presentation components. The sample assignments are generated for the current week. You can add, edit, and delete assignments in the interface, but these changes are held only in browser memory and are lost when the page is refreshed or closed. No database or persistent storage is configured.
-
-## Scope
-
-This project does not include authentication, member administration, reports, territories, notifications, real-time synchronization, or database integration.
+This MVP covers weekly assignments only. There is no public account registration, member directory, reports, territories, notifications, or other congregation module. The fictional SQL seed is optional and should be replaced with authorized congregation data.

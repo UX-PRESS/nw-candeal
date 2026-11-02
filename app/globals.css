@@ -73,10 +73,81 @@ textarea:focus-visible {
 
 .site-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   min-height: 48px;
+}
+
+.account-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.account-email {
+  max-width: 180px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.role-badge,
+.connection-badge {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.role-badge--admin,
+.connection-badge {
+  border-color: #bdd8c6;
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+}
+
+.sign-out-control {
+  display: grid;
+  justify-items: end;
+}
+
+.sign-out-button {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.77rem;
+  font-weight: 700;
+}
+
+.sign-out-button:hover {
+  background: var(--surface-subtle);
+}
+
+.sign-out-error {
+  max-width: 240px;
+  color: var(--danger);
+  font-size: 0.72rem;
+  text-align: right;
 }
 
 .brand {
@@ -575,6 +646,108 @@ h1 {
   color: var(--muted);
   font-size: 0.75rem;
   text-align: center;
+}
+
+.status-message,
+.load-error-panel {
+  max-width: 1120px;
+  margin: 14px auto 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.status-message--error,
+.load-error-panel {
+  border-color: #e6baba;
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.status-message--success {
+  border-color: #bdd8c6;
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+}
+
+.load-error-panel {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+}
+
+.load-error-panel p {
+  margin: 0;
+}
+
+.access-shell {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+}
+
+.access-panel {
+  width: min(100%, 520px);
+  padding: clamp(22px, 6vw, 38px);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.access-icon {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 20px;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.access-brand {
+  margin-bottom: 21px;
+}
+
+.access-panel h1 {
+  margin-bottom: 12px;
+  font-size: clamp(1.7rem, 8vw, 2.3rem);
+}
+
+.access-panel > p:not(.eyebrow, .status-message) {
+  color: var(--muted);
+  font-size: 0.91rem;
+  line-height: 1.65;
+}
+
+.access-panel code {
+  overflow-wrap: anywhere;
+  color: var(--brand-strong);
+  font-size: 0.83em;
+}
+
+.login-form {
+  display: grid;
+  gap: 15px;
+  margin-top: 21px;
+}
+
+.login-submit {
+  width: 100%;
+  min-height: 46px;
+}
+
+.assignment-form .status-message {
+  flex: 1 0 100%;
+  margin: 0;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 .dialog-backdrop {
