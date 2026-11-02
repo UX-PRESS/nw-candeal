@@ -1,7 +1,7 @@
 
 do $$
 declare
-  administrator_email text := 'replace-with-admin-email@example.com';
+  administrator_email text := 'anciao@adm.com';
   administrator_id uuid;
 begin
   select id
