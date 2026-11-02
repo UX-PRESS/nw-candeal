@@ -1,0 +1,125 @@
+"use client";
+
+import { Clock3, FileText, UserRound, UsersRound, X } from "lucide-react";
+import { useEffect, useRef } from "react";
+
+import { formatFullDate } from "@/lib/dates";
+import type { Assignment, MeetingType } from "@/types/assignment";
+
+type AssignmentDetailsProps = {
+  assignment: Assignment | null;
+  onClose: () => void;
+};
+
+const meetingLabels: Record<MeetingType, string> = {
+  midweek: "Reunião do meio de semana",
+  weekend: "Reunião do fim de semana",
+};
+
+export function AssignmentDetails({ assignment, onClose }: AssignmentDetailsProps) {
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!assignment) {
+      return;
+    }
+
+    closeButtonRef.current?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [assignment, onClose]);
+
+  if (!assignment) {
+    return null;
+  }
+
+  const timing = [
+    assignment.startTime,
+    assignment.durationMinutes ? `${assignment.durationMinutes} minutos` : undefined,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  return (
+    <div
+      className="dialog-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <section
+        className="assignment-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="assignment-details-title"
+      >
+        <header className="dialog-header">
+          <div>
+            <p className="dialog-eyebrow">{meetingLabels[assignment.meetingType]}</p>
+            <h2 id="assignment-details-title">{assignment.title}</h2>
+          </div>
+          <button
+            className="icon-button dialog-close"
+            type="button"
+            onClick={onClose}
+            aria-label="Fechar detalhes"
+            ref={closeButtonRef}
+          >
+            <X aria-hidden="true" size={20} />
+          </button>
+        </header>
+
+        <dl className="details-list">
+          <div>
+            <dt>Seção</dt>
+            <dd>{assignment.section}</dd>
+          </div>
+          <div>
+            <dt>Data</dt>
+            <dd>{formatFullDate(assignment.date)}</dd>
+          </div>
+          {timing ? (
+            <div>
+              <dt>
+                <Clock3 aria-hidden="true" size={16} /> Horário e duração
+              </dt>
+              <dd>{timing}</dd>
+            </div>
+          ) : null}
+          <div>
+            <dt>
+              <UserRound aria-hidden="true" size={16} /> Participante
+            </dt>
+            <dd>{assignment.participantName}</dd>
+          </div>
+          {assignment.assistantName ? (
+            <div>
+              <dt>
+                <UsersRound aria-hidden="true" size={16} /> Ajudante
+              </dt>
+              <dd>{assignment.assistantName}</dd>
+            </div>
+          ) : null}
+          {assignment.notes ? (
+            <div className="details-note">
+              <dt>
+                <FileText aria-hidden="true" size={16} /> Observações
+              </dt>
+              <dd>{assignment.notes}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </section>
+    </div>
+  );
+}
